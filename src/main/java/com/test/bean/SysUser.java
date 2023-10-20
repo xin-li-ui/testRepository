@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author xin.li
@@ -16,9 +17,6 @@ import java.util.List;
 @Data
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 public class SysUser implements UserDetails {
-
-    @Serial
-    private static final long serialVersionUID = 7755162995496909499L;
 
     private Long id;
 
@@ -32,22 +30,22 @@ public class SysUser implements UserDetails {
     private Boolean accountNonExpired;
     private Boolean credentialsNonExpired;
     private Boolean accountNonLocked;
-    private List<?> authorities;
+    private Set<GrantedAuthority> authorities;
 
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
-    }
-
-    @Override
-    public String getPassword() {
-        return null;
+        return authorities;
     }
 
     @Override
     public String getUsername() {
         return username;
+    }
+
+    @Override
+    public String getPassword() {
+        return this.password;
     }
 
     @Override

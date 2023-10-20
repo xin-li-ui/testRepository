@@ -18,11 +18,9 @@ public class Oauth2SuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
 
-        OidcUserInfoAuthenticationToken userInfoAuthenticationToken = (OidcUserInfoAuthenticationToken) authentication;
-
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpStatus.OK.value());
-        response.getWriter().write(JSONObject.toJSONString(ReturnVO.success(userInfoAuthenticationToken.getUserInfo())));
+        response.getWriter().write(JSONObject.toJSONString(ReturnVO.success(authentication.getPrincipal())));
         response.getWriter().flush();
     }
 }

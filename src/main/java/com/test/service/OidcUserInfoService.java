@@ -21,8 +21,8 @@ public class OidcUserInfoService {
 		private final Map<String, Map<String, Object>> userInfo = new HashMap<>();
 
 		public UserInfoRepository() {
-			this.userInfo.put("user1", createUser("user1"));
-			this.userInfo.put("user2", createUser("user2"));
+			this.userInfo.put("xin.li@ui.com", createUser("xin.li@ui.com"));
+			this.userInfo.put("xin.li+1@ui.com", createUser("xin.li+1@ui.com"));
 		}
 
 		public Map<String, Object> findByUsername(String username) {
