@@ -3,17 +3,21 @@ package com.test.handler;
 import com.alibaba.fastjson2.JSONObject;
 import com.test.model.ChallengeResult;
 import com.test.model.ReturnVO;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ *
+ */
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
@@ -22,9 +26,12 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         // UID MFA challenge
 
+
+        String requestJwtStr = obtainRequestJwtStr(request);
+
         ChallengeResult challengeResult = ChallengeResult.builder()
                 .status(ChallengeResult.TransactionStatus.MFA_REQUIRED)
-                .stateToken("10dfec0a0f9d458087e192f05362cc73")
+                .stateToken("222")
                 .stateTokenExpiredAt(1697630375L)
                 .build();
         response.setContentType("application/json;charset=UTF-8");
@@ -32,5 +39,11 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         response.getWriter().write(JSONObject.toJSONString(ReturnVO.success(challengeResult)));
         response.getWriter().flush();
 
+    }
+
+
+    @Nullable
+    protected String obtainRequestJwtStr(HttpServletRequest request) {
+        return request.getParameter("request");
     }
 }

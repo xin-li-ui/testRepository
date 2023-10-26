@@ -5,47 +5,40 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.test.filter.CustomAuthenticationFilter;
-import com.test.handler.*;
-import com.test.service.OidcUserInfoService;
+import com.test.filter.StateTokenAuthenticationFilter;
+import com.test.handler.CustomAuthenticationEntryPoint;
+import com.test.handler.CustomAuthenticationProvider;
+import com.test.handler.Oauth2FailureHandler;
 import com.test.service.SysUserService;
-import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.oidc.OidcScopes;
-import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
-import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.*;
-import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
-import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
-import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import javax.annotation.Resource;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -57,65 +50,41 @@ import java.util.*;
 @EnableWebSecurity
 public class AuthorizationServerConfig {
 
-
     @Resource
     private SysUserService sysUserService;
 
     @Bean
     @Order(1)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, AuthenticationManager manager) throws Exception {
-        //针对 Spring Authorization Server 最佳实践配置
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-
-
-//        CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(manager);
-
-        CustomStateTokenAuthenticationProvider stateTokenAuthenticationProvider = new CustomStateTokenAuthenticationProvider();
-        stateTokenAuthenticationProvider.setUserDetailsService(sysUserService);
-
 
         http
                 .getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-
-                .clientAuthentication((auth) -> auth
-                        .errorResponseHandler(new Oauth2FailureHandler())
-                        .authenticationSuccessHandler(new Oauth2SuccessHandler())
-                )
-                //token 相关配置 如  /oauth2/token接口
-                .tokenEndpoint((token) -> token
-                        .errorResponseHandler(new Oauth2FailureHandler())
-                )
-                .authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
-                        .errorResponseHandler(new Oauth2FailureHandler())
-                )
-
-                // Enable OpenID Connect 1.0
+//                .clientAuthentication((auth) -> auth
+//                        .errorResponseHandler(new Oauth2FailureHandler())
+//                        .authenticationSuccessHandler(new Oauth2SuccessHandler())
+//                )
+//                .tokenEndpoint((token) -> token
+//                        .errorResponseHandler(new Oauth2FailureHandler())
+//                )
+//                .authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
+//                        .errorResponseHandler(new Oauth2FailureHandler())
+//                )
                 .oidc(Customizer.withDefaults());
 
-
         http
-                // Redirect to the login page when not authenticated from the
-                // authorization endpoint
                 .exceptionHandling((exceptions) -> exceptions
-                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
 //                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
                 )
-
-                .anonymous(AbstractHttpConfigurer::disable)
-
-                .addFilterBefore(new CustomAuthenticationFilter(), SecurityContextHolderFilter.class)
-
-                // Accept access tokens for User Info and/or Client Registration
-                .oauth2ResourceServer((resourceServer) -> resourceServer.jwt(Customizer.withDefaults()))
-
-//                .authenticationManager(manager)
-                .authenticationProvider(stateTokenAuthenticationProvider)
-
-
+////                .anonymous(AbstractHttpConfigurer::disable)
+////                .authenticationProvider(stateTokenAuthenticationProvider)
+//
+//                // Accept access tokens for User Info and/or Client Registration
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
         ;
-
         return http.build();
-
     }
 
     @Bean
@@ -124,87 +93,90 @@ public class AuthorizationServerConfig {
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers(
-                                new AntPathRequestMatcher("/actuator/**"),
                                 new AntPathRequestMatcher("/oauth2/**"),
                                 new AntPathRequestMatcher("/**/*.json"),
                                 new AntPathRequestMatcher("/**/*.html")
+//                                new AntPathRequestMatcher("/**")
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+//                .httpBasic(Customizer.withDefaults())
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-
+                .addFilterBefore(stateTokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+//                .formLogin(Customizer.withDefaults())
 //                .formLogin(formLogin -> formLogin
-//                        .failureHandler(new Oauth2FailureHandler())
+//                        .usernameParameter("user_id")
+//                        .passwordParameter("state_token")
+//                        .loginProcessingUrl("/api/challenge")
+////                        .failureHandler(new Oauth2FailureHandler())
 //                )
                 .formLogin(AbstractHttpConfigurer::disable)
         ;
 
+
         return http.build();
     }
 
+//    @Bean
+//    WebSecurityCustomizer webSecurityCustomizer() {
+//        return web -> web.ignoring().requestMatchers("/api/v1/admin");
+//    }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
-        return authenticationManager;
+    public StateTokenAuthenticationFilter stateTokenAuthenticationFilter() {
+        StateTokenAuthenticationFilter filter = new StateTokenAuthenticationFilter();
+        filter.setAuthenticationManager(authenticationManager());
+        filter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
+//        filter.setFilterProcessesUrl("/api/challenge");
+//        filter.setAuthenticationFailureHandler(new Oauth2FailureHandler());
+        return filter;
     }
 
     @Bean
-    public AuthenticationProvider stateTokenAuthenticationProvider() {
-        CustomStateTokenAuthenticationProvider stateTokenAuthenticationProvider = new CustomStateTokenAuthenticationProvider();
-        stateTokenAuthenticationProvider.setUserDetailsService(sysUserService);
-        return stateTokenAuthenticationProvider;
+    public AuthenticationManager authenticationManager() {
+        // AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
+        CustomAuthenticationProvider customAuthenticationProvider = new CustomAuthenticationProvider();
+        customAuthenticationProvider.setUserDetailsService(sysUserService);
+        customAuthenticationProvider.setPasswordEncoder(passwordEncoder());
+        ProviderManager pm = new ProviderManager(customAuthenticationProvider);
+        return pm;
+    }
+
+    @Bean
+    public AuthorizationServerSettings authorizationServerSettings() {
+        return AuthorizationServerSettings.builder().build();
     }
 
 
 //    @Bean
-    public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId("oidc-client")
-                .clientSecret("{noop}secret")
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-                .redirectUri("http://www.baidu.com")
-                .redirectUri("http://localhost:9001/login/oauth2/code/oidc-client")
-                .redirectUri("http://localhost:9001/api/login/welcome")
-                .postLogoutRedirectUri("http://127.0.0.1:8080/")
-                .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                .scope("message.read")
-                .scope("message.write")
-                .scope("all")
-                // 设置 Client 需要页面审核授权
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-                .build();
-        return new InMemoryRegisteredClientRepository(oidcClient);
-    }
+//    public AuthenticationProvider stateTokenAuthenticationProvider() {
+//        // 验证 state token
+//        CustomAuthenticationProvider stateTokenAuthenticationProvider = new CustomAuthenticationProvider();
+//        stateTokenAuthenticationProvider.setUserDetailsService(sysUserService);
+//        return stateTokenAuthenticationProvider;
+//    }
 
-    @Bean
-    public OAuth2TokenCustomizer<JwtEncodingContext> idTokenCustomizer(OidcUserInfoService userInfoService) {
-        return (context) -> {
-            if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
-                OidcUserInfo userInfo = userInfoService.loadUser(context.getPrincipal().getName());
-                if (Objects.nonNull(userInfo)) {
-                    context.getClaims().claims(claims -> claims.putAll(userInfo.getClaims()));
-                }
-            }
-            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
-                context.getClaims().claims((claims) -> {
-                    claims.put("claim-1", "value-1");
-                    claims.put("claim-2", "value-2");
-                });
-            }
-        };
-    }
 
-    /**
-     * 默认发放令牌
-     *
-     * @return
-     */
+//    @Bean
+//    public OAuth2TokenCustomizer<JwtEncodingContext> idTokenCustomizer(OidcUserInfoService userInfoService) {
+//        return (context) -> {
+//            if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
+//                OidcUserInfo userInfo = userInfoService.loadUser(context.getPrincipal().getName());
+//                if (Objects.nonNull(userInfo)) {
+//                    context.getClaims().claims(claims -> claims.putAll(userInfo.getClaims()));
+//                }
+//            }
+//            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+//                context.getClaims().claims((claims) -> {
+//                    claims.put("claim-1", "value-1");
+//                    claims.put("claim-2", "value-2");
+//                });
+//            }
+//        };
+//    }
+
+
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
         KeyPair keyPair = generateRsaKey();
@@ -217,20 +189,6 @@ public class AuthorizationServerConfig {
         JWKSet jwkSet = new JWKSet(rsaKey);
         return new ImmutableJWKSet<>(jwkSet);
     }
-
-//    @Bean
-//    public JWKSource<SecurityContext> jwkSource(RegisteredClientRepository registeredClientRepository) {
-//        return (jwkSelector, context) -> {
-//
-//            RegisteredClient registeredClient = registeredClientRepository.findByClientId(context.);
-//            KeyPair keyPair = generateRsaKey(); // 为每个客户端生成不同的密钥对
-//            RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
-//                    .privateKey(keyPair.getPrivate())
-//                    .keyID(registeredClient.getClientId())
-//                    .build();
-//            return new JWKSet(rsaKey);
-//        };
-//    }
 
     private static KeyPair generateRsaKey() {
         KeyPair keyPair;
@@ -248,15 +206,6 @@ public class AuthorizationServerConfig {
     public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
-
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        UserDetails userDetails = User.withDefaultPasswordEncoder()
-//                .username("xin.li@ui.com")
-//                .password("111")
-//                .build();
-//        return new InMemoryUserDetailsManager(userDetails);
-//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

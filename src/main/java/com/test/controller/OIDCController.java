@@ -10,7 +10,6 @@ import com.auth0.jwt.interfaces.RSAKeyProvider;
 import com.auth0.jwt.interfaces.Verification;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.jwk.JWK;
 import com.test.model.ChallengeResult;
 import com.test.model.ReturnVO;
 import lombok.extern.slf4j.Slf4j;
@@ -37,20 +36,30 @@ import java.util.Map;
 public class OIDCController {
 
 
-    @GetMapping("/challenge")
-    public ReturnVO test(@RequestParam("state_token") String stateToken) throws JsonProcessingException {
+    @PostMapping("/api/challenge")
+    public ReturnVO test() throws JsonProcessingException {
         ChallengeResult data = ChallengeResult.builder()
                 .status(ChallengeResult.TransactionStatus.SUCCESS)
-                .stateToken(stateToken)
+                .stateToken("challenge")
                 .stateTokenExpiredAt(Instant.now().plus(10, ChronoUnit.MINUTES).getEpochSecond())
                 .build();
         return ReturnVO.success(data);
     }
 
 
-    @GetMapping("/api/v1/admin2")
-    public String test2() throws JsonProcessingException {
+    @PostMapping("/doLogin")
+    public ReturnVO doLogin() {
+        ChallengeResult data = ChallengeResult.builder()
+                .status(ChallengeResult.TransactionStatus.SUCCESS)
+                .stateToken("challenge")
+                .stateTokenExpiredAt(Instant.now().plus(10, ChronoUnit.MINUTES).getEpochSecond())
+                .build();
+        return ReturnVO.success(data);
+    }
 
+
+    @GetMapping("/api/v1/admin")
+    public String test2() throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, String> map = new HashMap<>();
         map.put("id", "123");

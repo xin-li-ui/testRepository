@@ -1,27 +1,28 @@
-package com.test.config;
-
-import com.test.filter.CustomAuthenticationFilter;
-import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-
-@Configuration
-public class ComponentConfig {
-
-//    @Resource
-//    private AuthenticationManager authenticationManager;
+//package com.test.config;
 //
-//    @Bean
-//    public FilterRegistrationBean<CustomAuthenticationFilter> internalAPIInterceptor() {
-//        FilterRegistrationBean<CustomAuthenticationFilter> filterRegBean = new FilterRegistrationBean<>();
-//        CustomAuthenticationFilter filter = new CustomAuthenticationFilter(authenticationManager);
-//        filterRegBean.setFilter(filter);
-//        filterRegBean.addUrlPatterns("/challenge");
-//        filterRegBean.setOrder(500);
-//        return filterRegBean;
-//    }
-
-}
+//import com.test.filter.CustomAuthenticationFilter;
+//import com.test.filter.StateTokenAuthenticationFilter;
+//import jakarta.annotation.Resource;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.boot.web.servlet.FilterRegistrationBean;
+//import org.springframework.context.annotation.Bean;
+//import org.springframework.context.annotation.Configuration;
+//import org.springframework.security.authentication.AuthenticationManager;
+//
+//@Configuration
+//public class ComponentConfig {
+//
+////    @Resource
+////    private AuthenticationManager authenticationManager;
+////
+////    @Bean
+////    public FilterRegistrationBean<StateTokenAuthenticationFilter> internalAPIInterceptor() {
+////        FilterRegistrationBean<StateTokenAuthenticationFilter> filterRegBean = new FilterRegistrationBean<>();
+////        StateTokenAuthenticationFilter filter = new StateTokenAuthenticationFilter();
+////        filterRegBean.setFilter(filter);
+////        filterRegBean.addUrlPatterns("/api/challenge");
+////        filterRegBean.setOrder(0);
+////        return filterRegBean;
+////    }
+//
+//}
